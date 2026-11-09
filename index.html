@@ -253,6 +253,14 @@ body.vopen .edgear{display:none}
   border:1px solid var(--line);background:var(--card);color:var(--text);cursor:pointer}
 .edbar button[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:#fff}
 .edbar .sp{flex:1}
+.edsize{display:inline-flex;align-items:center;gap:8px;padding:4px 10px 4px 11px;border:1px solid var(--line);
+  border-radius:8px;background:var(--card)}
+.edsize[hidden]{display:none}
+.edsizelbl{font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--mapsoft)}
+.edsize input[type=range]{width:110px;accent-color:var(--blue);margin:0}
+.edsizedot circle{fill:color-mix(in srgb,var(--blue) 26%,transparent);stroke:var(--blue);stroke-width:3}
+@media (max-height:520px){.edsize{padding:3px 8px;gap:6px}.edsize input[type=range]{width:78px}}
+@media (max-width:480px){.edsize input[type=range]{width:86px}}
 .edbar .edstat{font-size:12px;font-weight:600;color:var(--mapsoft)}
 @media (max-height:520px){.edbar{padding:6px 10px;gap:5px}
   .edbar button,.edbar select{font-size:10.5px;padding:6px 8px}
@@ -398,6 +406,11 @@ body.editing .viewer-body{cursor:crosshair;touch-action:none}
     <button id="ednew" type="button" aria-pressed="false">New point</button>
     <button id="edopenw" type="button" aria-pressed="false">Open way</button>
     <button id="edblockw" type="button" aria-pressed="false">Block way</button>
+    <span class="edsize" id="edsizewrap" hidden>
+      <span class="edsizelbl">Size</span>
+      <input id="edsize" type="range" min="3" max="60" step="1" value="11" aria-label="Brush size">
+      <svg class="edsizedot" viewBox="0 0 64 64" width="24" height="24" aria-hidden="true"><circle id="edsizedot" cx="32" cy="32" r="12"/></svg>
+    </span>
     <button id="edundo" type="button">Undo</button>
     <span class="edstat" id="edstat"></span><span class="sp"></span>
     <button id="edsave" type="button">Save</button>
@@ -1829,8 +1842,11 @@ function navPic(fk){
 function edLayer(fk){
   const f=DATA.floors[fk],T=f.ih/100,n=f.nav;
   let s='<g class="edl">';
-  if(ED.tool==='open'||ED.tool==='block')
+  if(ED.tool==='open'||ED.tool==='block'){
     s+=`<image href="${navPic(fk)}" x="0" y="0" width="${n.gw*n.cell}" height="${n.gh*n.cell}" preserveAspectRatio="none" style="image-rendering:pixelated"/>`;
+    const b=ED.xy&&ED.hover?ED.xy:[-9999,-9999];
+    s+=`<circle class="edbrush" cx="${b[0]}" cy="${b[1]}" r="${ED.brush}" fill="${ED.tool==='open'?'rgba(34,197,94,.22)':'rgba(244,63,94,.22)'}" stroke="${ED.tool==='open'?'#16A34A':'#E11D48'}" stroke-width="${(T*0.22).toFixed(2)}"/>`;
+  }
   for(const p of f.places){
     const a=p.dr||[p.cx,p.cy], on=(ED.sel===p.id);
     s+=`<circle cx="${a[0].toFixed(1)}" cy="${a[1].toFixed(1)}" r="${(T*(on?1.5:0.8)).toFixed(2)}" fill="${on?'#F43F5E':'#1B4FD8'}" fill-opacity="${on?0.95:0.5}" stroke="#fff" stroke-width="${(T*0.2).toFixed(2)}"/>`;
@@ -1848,12 +1864,24 @@ function edPaint(){
   $('vtitle').textContent='Map tools';
   $('vstep').textContent=f.name;
 }
+function edBrushUI(){
+  $('edsize').value=ED.brush;
+  $('edsizedot').setAttribute('r',Math.max(3,Math.min(30,ED.brush*0.5+2)).toFixed(1));
+  $('edsizewrap').hidden=!(ED.tool==='open'||ED.tool==='block');
+}
 function edTool(t){
-  ED.tool=t; ED.sel=null;
+  ED.tool=t; ED.sel=null; edBrushUI();
   for(const [id,k] of [['edmove','move'],['ednew','add'],['edopenw','open'],['edblockw','block']])
     $(id).setAttribute('aria-pressed',k===t?'true':'false');
   edSay(edHint[t]); edPaint();
 }
+try{const _b=parseInt(localStorage.getItem('caequest-brush'),10); if(_b>=3&&_b<=60)ED.brush=_b;}catch(e){}
+$('edsize').oninput=e=>{
+  ED.brush=Math.max(3,Math.min(60,+e.target.value||11));
+  try{localStorage.setItem('caequest-brush',String(ED.brush));}catch(err){}
+  edBrushUI();
+  const c=$('vbody').querySelector('.edbrush'); if(c)c.setAttribute('r',ED.brush);
+};
 $('edmove').onclick=()=>edTool('move');
 $('ednew').onclick=()=>edTool('add');
 $('edopenw').onclick=()=>edTool('open');
@@ -1892,7 +1920,7 @@ function edAfterNav(){
     const q=edAt(e); if(!q)return;
     e.preventDefault();
     if(ED.tool==='open'||ED.tool==='block'){
-      edSnap(); ED.paint=(ED.tool==='open')?1:0;
+      edSnap(); ED.paint=(ED.tool==='open')?1:0; ED.xy=q; ED.hover=true;
       if(edCells(q[0],q[1],ED.paint)){edAfterNav();edPaint();}
       try{b.setPointerCapture(e.pointerId);}catch(err){}
       return;
@@ -1917,9 +1945,19 @@ function edAfterNav(){
     edSay('“'+moved+'” moved. '+edHint.move); edPaint();
   });
   b.addEventListener('pointermove',e=>{
-    if(!ED.on||ED.paint===null)return;
+    if(!ED.on)return;
     const q=edAt(e); if(!q)return;
+    if(ED.tool==='open'||ED.tool==='block'){
+      ED.xy=q; ED.hover=true;
+      const c=b.querySelector('.edbrush');
+      if(c){c.setAttribute('cx',q[0].toFixed(1));c.setAttribute('cy',q[1].toFixed(1));c.setAttribute('r',ED.brush);}
+    }
+    if(ED.paint===null)return;
     if(edCells(q[0],q[1],ED.paint)){edAfterNav();edPaint();}
+  });
+  b.addEventListener('pointerleave',()=>{
+    ED.hover=false;
+    const c=b.querySelector('.edbrush'); if(c){c.setAttribute('cx',-9999);c.setAttribute('cy',-9999);}
   });
   const up=()=>{ if(ED.paint===null)return; ED.paint=null; edApply(); edPaint(); edSay(edHint[ED.tool]); };
   b.addEventListener('pointerup',up); b.addEventListener('pointercancel',up);
@@ -1949,11 +1987,16 @@ $('edsave').onclick=()=>{
   catch(e){edSay('This browser would not save it.');}
 };
 $('edexport').onclick=()=>{
-  const blob=new Blob([JSON.stringify(EDLOC,null,1)],{type:'application/json'});
+  const all=edMerge(EDPUB,EDLOC);
+  let n=0;
+  for(const fk in all.places)n+=Object.keys(all.places[fk]).length;
+  for(const fk in all.added)n+=all.added[fk].length;
+  for(const fk in all.nav)n+=Object.keys(all.nav[fk]).length?1:0;
+  const blob=new Blob([JSON.stringify(all,null,1)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='edits.json';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),5000);
-  edSay('edits.json downloaded — put it beside index.html in the repo.');
+  edSay('edits.json downloaded, '+n+' change'+(n===1?'':'s')+' in it — replace the one in the repo.');
 };
 let edArm=0;
 $('edclear').onclick=()=>{
