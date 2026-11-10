@@ -393,6 +393,12 @@ body.editing .viewer-body{cursor:crosshair;touch-action:none}
   <div class="edmsg" id="edaddmsg"></div>
   <div class="row2"><button id="edaddcancel" type="button">Cancel</button><button id="edaddok" type="button" class="pri">Add</button></div>
 </div></div>
+<div class="edsheet" id="eddelask" hidden><div class="edcard">
+  <h3>Delete this point?</h3>
+  <div class="edmsg" id="eddelwhat"></div>
+  <p class="ednote">It goes from the map, the search and the lists. Undo puts it back.</p>
+  <div class="row2"><button id="eddelcancel" type="button">Keep it</button><button id="eddelok" type="button" class="pri">Delete</button></div>
+</div></div>
 <div class="viewer" id="viewer" hidden>
   <div class="viewer-bar"><strong id="vtitle">Floor</strong><span id="vstep" class="vstep"></span>
     <button id="vloo" aria-pressed="false" title="Show the way to the nearest restroom on this floor">Restroom</button>
@@ -404,6 +410,7 @@ body.editing .viewer-body{cursor:crosshair;touch-action:none}
     <select id="edfloor" aria-label="Floor"></select>
     <button id="edmove" type="button" aria-pressed="true">Move point</button>
     <button id="ednew" type="button" aria-pressed="false">New point</button>
+    <button id="eddel" type="button" aria-pressed="false">Delete point</button>
     <button id="edopenw" type="button" aria-pressed="false">Open way</button>
     <button id="edblockw" type="button" aria-pressed="false">Block way</button>
     <span class="edsize" id="edsizewrap" hidden>
@@ -525,6 +532,11 @@ function edApply(){
       if(e.cx!=null){q.cx=e.cx;q.cy=e.cy;}
       if(e.x!=null){q.x=e.x;q.y=e.y;if(e.w!=null){q.w=e.w;q.h=e.h;}}
     }
+  }
+  for(const fk in EDITS.places){            // and the ones taken away
+    const f=DATA.floors[fk]; if(!f)continue;
+    const m=EDITS.places[fk];
+    f.places=f.places.filter(q=>!(m[q.id]&&m[q.id].del));
   }
   for(const fk in EDITS.nav){
     const b=NAV[fk]; if(!b)continue;
@@ -1776,9 +1788,10 @@ if(QRTO){st.B.pb=st.B.pf=st.B.pr=true;}
 // Map tools.  A pass phrase written into a page that anyone can read is a
 // latch, not a lock: it keeps a passer-by out of the editor and nothing more.
 const EDUSER='tech', EDPASS='tech';
-const ED={on:false,tool:'move',sel:null,fk:null,brush:11,paint:null,undo:[],xy:null};
-const edHint={move:'Tap a dot to pick it up, then tap where it belongs.',
+const ED={on:false,tool:'move',sel:null,fk:null,brush:11,paint:null,undo:[],xy:null,drag:null};
+const edHint={move:'Drag a dot to move it.',
               add :'Tap the spot for the new point.',
+              del :'Tap the dot you want gone.',
               open:'Drag over the floor to make it walkable.',
               block:'Drag over the floor to close it off.'};
 function edUnlocked(){try{return sessionStorage.getItem('caequest-ed')==='1';}catch(e){return false;}}
@@ -1822,7 +1835,7 @@ function edClose(){
   document.body.classList.remove('editing','vopen');
   $('edbar').hidden=true; $('viewer').hidden=true; unlockPage();
   if(ROUTE.length&&ROUTE.indexOf(zfk)>=0)vNav();
-  if(STEP>=STEPDEF.length)go();
+  if(STEP>=STEPDEF.length)go(); else wiz();
 }
 function edFit(){
   const b=$('vbody'),f=DATA.floors[ED.fk];
@@ -1849,10 +1862,19 @@ function edLayer(fk){
   }
   for(const p of f.places){
     const a=p.dr||[p.cx,p.cy], on=(ED.sel===p.id);
-    s+=`<circle cx="${a[0].toFixed(1)}" cy="${a[1].toFixed(1)}" r="${(T*(on?1.5:0.8)).toFixed(2)}" fill="${on?'#F43F5E':'#1B4FD8'}" fill-opacity="${on?0.95:0.5}" stroke="#fff" stroke-width="${(T*0.2).toFixed(2)}"/>`;
+    const dot=on?'#F43F5E':(ED.tool==='del'?'#E11D48':'#1B4FD8');
+    s+=`<circle cx="${a[0].toFixed(1)}" cy="${a[1].toFixed(1)}" r="${(T*(on?1.5:0.8)).toFixed(2)}" fill="${dot}" fill-opacity="${on?0.95:0.6}" stroke="#fff" stroke-width="${(T*0.2).toFixed(2)}"/>`;
     if(on)s+=`<text x="${a[0].toFixed(1)}" y="${(a[1]-T*2.3).toFixed(1)}" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-weight="800" font-size="${(T*1.6).toFixed(2)}" fill="#F43F5E">${ESC(p.id)}</text>`;
   }
   return s+'</g>';
+}
+function edRefresh(){
+  const g=$('vbody').querySelector('.edl');
+  if(!g)return edPaint();
+  const t=document.createElementNS('http://www.w3.org/2000/svg','g');
+  t.innerHTML=edLayer(ED.fk);
+  const inner=t.querySelector('.edl')||t;
+  g.innerHTML=inner.innerHTML;
 }
 function edPaint(){
   const fk=ED.fk,f=DATA.floors[fk];
@@ -1871,7 +1893,7 @@ function edBrushUI(){
 }
 function edTool(t){
   ED.tool=t; ED.sel=null; edBrushUI();
-  for(const [id,k] of [['edmove','move'],['ednew','add'],['edopenw','open'],['edblockw','block']])
+  for(const [id,k] of [['edmove','move'],['ednew','add'],['eddel','del'],['edopenw','open'],['edblockw','block']])
     $(id).setAttribute('aria-pressed',k===t?'true':'false');
   edSay(edHint[t]); edPaint();
 }
@@ -1884,6 +1906,7 @@ $('edsize').oninput=e=>{
 };
 $('edmove').onclick=()=>edTool('move');
 $('ednew').onclick=()=>edTool('add');
+$('eddel').onclick=()=>edTool('del');
 $('edopenw').onclick=()=>edTool('open');
 $('edblockw').onclick=()=>edTool('block');
 $('edfloor').onchange=e=>{ED.fk=e.target.value; zfk=ED.fk; ED.sel=null; edFit();};
@@ -1927,17 +1950,32 @@ function edAfterNav(){
     }
     if(ED.tool==='add'){ ED.xy=q; $('edaddmsg').textContent=''; $('edname').value='';
       $('edadd').hidden=false; setTimeout(()=>{try{$('edname').focus();}catch(err){}},30); return; }
-    // move
-    const f=DATA.floors[ED.fk], T=f.ih/100;
-    if(!ED.sel){
-      let best=null,bd=T*5;
-      for(const p of f.places){
+    if(ED.tool==='del'){
+      const fd=DATA.floors[ED.fk], Td=fd.ih/100;
+      let pick=null,pd=Td*5;
+      for(const p of fd.places){
         const a=p.dr||[p.cx,p.cy], d=Math.hypot(a[0]-q[0],a[1]-q[1]);
-        if(d<bd){bd=d;best=p;}
+        if(d<pd){pd=d;pick=p;}
       }
-      if(!best){edSay('No point there. Tap right on a dot.');return;}
-      ED.sel=best.id; edSay('“'+best.id+'” picked up — now tap where it belongs.'); edPaint(); return;
+      if(!pick){ED.sel=null;edRefresh();return edSay('No point there. '+edHint.del);}
+      ED.sel=pick.id; edRefresh();
+      $('eddelwhat').textContent='“'+pick.id+'”'+(pick.nm?' — '+pick.nm:'');
+      $('eddelask').hidden=false; return;
     }
+    // move: pick a dot up and drag it
+    const f=DATA.floors[ED.fk], T=f.ih/100;
+    let best=null,bd=T*5;
+    for(const p of f.places){
+      const a=p.dr||[p.cx,p.cy], d=Math.hypot(a[0]-q[0],a[1]-q[1]);
+      if(d<bd){bd=d;best=p;}
+    }
+    if(best){
+      ED.drag={id:best.id,start:q,moved:false,was:(best.dr||[best.cx,best.cy]).slice()};
+      ED.sel=best.id;
+      try{b.setPointerCapture(e.pointerId);}catch(err){}
+      edRefresh(); return;
+    }
+    if(!ED.sel){edSay('No point there. Drag a dot to move it.');return;}
     edSnap();
     EDLOC.places=EDLOC.places||{}; const m=EDLOC.places[ED.fk]=EDLOC.places[ED.fk]||{};
     m[ED.sel]=Object.assign({},m[ED.sel],{dr:[+q[0].toFixed(1),+q[1].toFixed(1)]});
@@ -1947,6 +1985,12 @@ function edAfterNav(){
   b.addEventListener('pointermove',e=>{
     if(!ED.on)return;
     const q=edAt(e); if(!q)return;
+    if(ED.drag){
+      if(Math.hypot(q[0]-ED.drag.start[0],q[1]-ED.drag.start[1])>2)ED.drag.moved=true;
+      const p=DATA.floors[ED.fk].places.find(z=>z.id===ED.drag.id);
+      if(p){p.dr=[q[0],q[1]];edRefresh();}
+      return;
+    }
     if(ED.tool==='open'||ED.tool==='block'){
       ED.xy=q; ED.hover=true;
       const c=b.querySelector('.edbrush');
@@ -1959,10 +2003,53 @@ function edAfterNav(){
     ED.hover=false;
     const c=b.querySelector('.edbrush'); if(c){c.setAttribute('cx',-9999);c.setAttribute('cy',-9999);}
   });
-  const up=()=>{ if(ED.paint===null)return; ED.paint=null; edApply(); edPaint(); edSay(edHint[ED.tool]); };
+  const up=()=>{
+    if(ED.drag){
+      const d=ED.drag; ED.drag=null;
+      const p=DATA.floors[ED.fk].places.find(z=>z.id===d.id);
+      if(!d.moved){
+        if(p)p.dr=d.was.slice();
+        edSay('“'+d.id+'” picked up — drag it, or tap where it belongs.');
+        return edPaint();
+      }
+      const now=p.dr.slice();
+      p.dr=d.was.slice(); edSnap();                    // the undo point is where it started
+      EDLOC.places=EDLOC.places||{};
+      const m=EDLOC.places[ED.fk]=EDLOC.places[ED.fk]||{};
+      m[d.id]=Object.assign({},m[d.id],{dr:[+now[0].toFixed(1),+now[1].toFixed(1)]});
+      ED.sel=null; edApply(); edPaint();
+      edSay('“'+d.id+'” moved. '+edHint.move);
+      return;
+    }
+    if(ED.paint===null)return; ED.paint=null; edApply(); edPaint(); edSay(edHint[ED.tool]);
+  };
   b.addEventListener('pointerup',up); b.addEventListener('pointercancel',up);
 })();
 
+$('eddelcancel').onclick=()=>{$('eddelask').hidden=true; ED.sel=null; edRefresh();};
+$('eddelok').onclick=()=>{
+  const id=ED.sel, fk=ED.fk;
+  $('eddelask').hidden=true;
+  if(!id)return;
+  edSnap();
+  // a point this device added just goes; anything published or built in is
+  // marked deleted instead, because those lists are not ours to rewrite
+  if(EDLOC.added&&EDLOC.added[fk]){
+    const j=EDLOC.added[fk].findIndex(p=>p.id===id);
+    if(j>=0)EDLOC.added[fk].splice(j,1);
+  }
+  EDLOC.places=EDLOC.places||{}; const m=EDLOC.places[fk]=EDLOC.places[fk]||{};
+  m[id]=Object.assign({},m[id],{del:true});
+  // if the trip was using it, wind the wizard back to the step that chose it
+  const frStep=sd=>{for(let i=0;i<STEPDEF.length;i++)
+    if(STEPDEF[i].s===sd&&STEPDEF[i].k==='fr')return i; return 0;};
+  let back=-1;
+  if(st.A.f===fk&&st.A.id===id){st.A.id=null;st.A.pr=false;back=frStep('A');}
+  if(st.B.f===fk&&st.B.id===id){st.B.id=null;st.B.pr=false;if(back<0)back=frStep('B');}
+  if(back>=0){STEP=Math.min(STEP,back); ROUTE=[]; LASTR=null;}
+  ED.sel=null; edApply(); edPaint();
+  edSay('“'+id+'” deleted. Undo puts it back.');
+};
 $('edaddcancel').onclick=()=>{$('edadd').hidden=true;};
 $('edaddok').onclick=()=>{
   const name=$('edname').value.trim();
@@ -1971,6 +2058,7 @@ $('edaddok').onclick=()=>{
     return $('edaddmsg').textContent='That name is already on this floor.';
   const f=DATA.floors[ED.fk],T=f.ih/100,[x,y]=ED.xy,w=T*7.5,h=T*4.5;
   edSnap();
+  if(EDLOC.places&&EDLOC.places[ED.fk])delete EDLOC.places[ED.fk][name];
   EDLOC.added=EDLOC.added||{}; EDLOC.added[ED.fk]=EDLOC.added[ED.fk]||[];
   EDLOC.added[ED.fk].push({id:name,k:$('edkind').value,
     x:+(x-w/2).toFixed(1),y:+(y-h/2).toFixed(1),w:+w.toFixed(1),h:+h.toFixed(1),
