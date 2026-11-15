@@ -36,6 +36,7 @@
 *{box-sizing:border-box} html,body{margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,sans-serif;font-size:18px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .appbar{background:var(--navy);color:#fff;padding:0 20px;min-height:58px;display:flex;align-items:center;gap:14px}
+.brandwrap{display:flex;align-items:center;gap:14px;min-width:0}
 .brand{display:flex;align-items:center;gap:9px;flex:0 0 auto}
 .mark{position:relative;display:block;line-height:0}
 .mark::after{content:"";position:absolute;left:0;right:0;bottom:-7px;height:3px;border-radius:2px;background:var(--lime)}
@@ -48,6 +49,15 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple
 .help-body{flex:1;overflow:auto;
   padding:26px max(20px,env(safe-area-inset-right)) 60px max(20px,env(safe-area-inset-left))}
 .help-in{max-width:760px;margin:0 auto}
+.qrwrap{max-width:520px;margin:0 auto;text-align:center}
+.qrtrip{font-size:21px;font-weight:800;color:var(--heading);margin:4px 0 20px;line-height:1.35}
+.qrcard{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;
+  display:inline-block;box-shadow:0 10px 30px rgba(12,24,60,.10)}
+.qrcard canvas{display:block;image-rendering:pixelated;max-width:100%;height:auto}
+.qrhint{font-size:16px;line-height:1.6;color:var(--text-dim);margin:22px 0 10px}
+.qrlink{font-size:12px;color:var(--text-dim);opacity:.75;word-break:break-all;margin:0 0 26px}
+button.qrmap{width:100%;max-width:340px}
+@media(max-width:420px){.qrcard{padding:14px}}
 .help h3{font-size:19px;font-weight:800;color:var(--heading);margin:30px 0 10px}
 .help h3:first-child{margin-top:0}
 .help p,.help li{font-size:16px;line-height:1.55;color:var(--text);margin:0 0 10px}
@@ -89,6 +99,7 @@ select{width:100%;font-family:inherit;font-size:19px;font-weight:600;padding:13p
 .wiz{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:20px 24px 26px;margin:0 auto 18px;max-width:880px}
 #msg:empty{display:none}
 .steps[hidden]{display:none}
+.wiztop[hidden]{display:none}
 .wiztop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:34px}
 .wback{font-family:inherit;font-size:14px;font-weight:800;letter-spacing:.04em;padding:9px 14px;border-radius:9px;border:1.5px solid var(--line);background:var(--card);color:var(--text-mid);cursor:pointer}
 .wback:hover{color:var(--heading);border-color:var(--blue)}
@@ -302,32 +313,46 @@ body.editing .viewer-body{cursor:crosshair;touch-action:none}
 .note-box{background:color-mix(in srgb,var(--blue) 8%,var(--card));border:1px solid color-mix(in srgb,var(--blue) 30%,var(--card));border-left:4px solid var(--blue);border-radius:10px;padding:15px 20px;margin-bottom:18px}
 @media(max-width:760px){
   body{font-size:17px} .wrap{padding:16px 13px 60px}
-  .appbar{padding:0 14px;min-height:52px;gap:10px}
-  .logo{height:17px} .appname{font-size:22px} .appsub{display:none}
+  .appbar{padding:0 14px;min-height:58px;gap:10px}
+  .logo{height:17px} .appname{font-size:22px}
+  .brandwrap{flex-direction:column;align-items:flex-start;gap:0}
+  .appsub{font-size:9.5px;letter-spacing:.11em;line-height:1.4;margin-top:9px;padding-left:0;border-left:0;color:rgba(255,255,255,.46)}
+  .appbar .headbtns{flex-wrap:nowrap;width:auto;order:0;margin-left:auto}
   .panel{padding:16px 15px} .row{gap:18px}
   select{font-size:17px;padding:14px 13px}
   .seg button{padding:12px 4px;font-size:12px}
   button.go{flex:1;padding:16px 18px} .swap{flex:1}
   .floor .head{padding:11px 13px;gap:9px} .floor .head h2{font-size:13px}
   .floor .head .note{width:100%;order:3;font-size:10.5px}
-  .headbtns{width:100%;order:4;margin-left:0}
+  .floor .head .headbtns{width:100%;order:4;margin-left:0}
   .viewpick{flex:1} .viewpick button{flex:1;padding:10px 8px}
   .viewer-bar strong{width:100%;margin-right:0} .viewer-bar button{flex:1}
 }
+@media(max-width:760px){
+  .helpbar{flex-wrap:nowrap}
+  .helpbar strong{width:auto;margin-right:0}
+  .helpbar .vstep{width:auto;flex:1;order:0;min-width:0}
+  .helpbar .close{flex:0 0 auto}
+  .viewer-bar .close{flex:0 0 auto;min-width:48px}
+}
+@media(max-width:620px){ .appbar #themeTxt{display:none} }
 @media(max-width:400px){
   .appbar{padding:0 10px;gap:7px}
   .appname{font-size:19px}
   .appbar .headbtns{gap:6px}
-  .appbar .themebtn{padding:7px 10px;gap:5px;letter-spacing:.04em;font-size:11px}
+  .appbar .themebtn{padding:7px 9px;gap:4px;letter-spacing:.015em;font-size:10.5px}
+  .appbar #themeIcon{font-size:13px}
 }
 </style>
 </head>
 <body>
 <header class="appbar">
+  <div class="brandwrap">
   <div class="brand"><span class="mark"><img class="logo" src="data:image/png;base64,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" alt="CAE"></span><span class="appname">Quest</span></div>
   <span class="appsub">CAE Dallas</span>
+  </div>
   <div class="headbtns">
-    <button class="themebtn" id="helpBtn" type="button"><span aria-hidden="true">?</span><span>Help / Feedback</span></button>
+    <button class="themebtn" id="helpBtn" type="button"><span aria-hidden="true">?</span><span>Help<span class="hb-more"> / Feedback</span></span></button>
     <button class="themebtn" id="themeBtn" type="button" aria-label="Switch theme"><span id="themeIcon">&#9789;</span><span id="themeTxt">Dark</span></button>
   </div>
 </header>
@@ -361,16 +386,31 @@ body.editing .viewer-body{cursor:crosshair;touch-action:none}
   <div class="panel tripbar" id="tripbar" hidden>
     <div class="trip" id="trip"></div>
     <div class="actions"><button class="go" id="startroute">Start route</button>
+      <button class="swap" id="qrshow" title="Show a code to scan with a phone">Show QR code</button>
       <button class="swap" id="again">Change</button>
       <button class="swap" id="over2">Start over</button>
+      <button class="swap" id="savelink" title="Copy this route's web address">Copy link</button>
       <span class="qlabel howlbl">Between floors</span><div class="seg howseg" id="how"></div></div>
   </div>
   <div id="msg"></div>
   <div class="steps" id="steps" hidden></div>
   <div id="floors"></div>
 </div>
+<div class="help" id="qrpanel" hidden>
+  <div class="viewer-bar helpbar"><strong>Take this route with you</strong><span class="vstep"></span>
+    <button id="qrclose" class="close" aria-label="Close" title="Close">&#10005;</button></div>
+  <div class="help-body"><div class="qrwrap">
+    <p class="qrtrip" id="qrtrip"></p>
+    <div class="qrcard"><canvas id="qrcanvas" width="560" height="560"></canvas></div>
+    <p class="qrhint">Point a phone&rsquo;s camera at the code and tap the link that appears
+       &mdash; the same walk opens there, ready to carry.<br>
+       <b>Reading this on your own phone?</b> Just tap below.</p>
+    <p class="qrlink" id="qrlink"></p>
+    <button class="go qrmap" id="qrmap">Show map instead</button>
+  </div></div>
+</div>
 <div class="help" id="help" hidden>
-  <div class="viewer-bar"><strong>Help / Feedback</strong><span class="vstep"></span>
+  <div class="viewer-bar helpbar"><strong>Help / Feedback</strong><span class="vstep"></span>
     <button id="hclose" class="close" aria-label="Close" title="Close">&#10005;</button></div>
   <div class="help-body" id="hbody"></div>
 </div>
@@ -1184,6 +1224,8 @@ function go(){
   const R=build();
   if(R.err){ROUTE=[];out.innerHTML='';msg.innerHTML='<div class="msg">'+R.err+'</div>';return;}
   ROUTE=R.seq.slice(); LASTR=R;
+  syncURL();                 // the trip on screen is the trip in the address bar
+  setTimeout(maybeQR,60);    // ... and the code for it comes up by itself
   steps.hidden=false;
   steps.innerHTML='<span class="lbl">Your route</span>'+R.seq.map((fk,i)=>{
     const t=i/Math.max(1,R.seq.length-1);
@@ -1409,6 +1451,7 @@ function applyT(t){document.documentElement.setAttribute('data-theme',t);
 $('themeBtn').onclick=()=>{const n=isDark()?'light':'dark';try{localStorage.setItem('quest.theme',n);}catch(e){}applyT(n);};
 $('again').onclick=()=>{STEP=0;FILTER='';wiz();};
 $('over2').onclick=startOver;
+$('savelink').onclick=copyLink;
 $('startroute').onclick=()=>{if(ROUTE.length)openV(ROUTE[0]);};
 // ---------------------------------------------------------------
 // Two questions to each half of the trip: which wing, then which
@@ -1467,7 +1510,33 @@ function tripBar(){
   one('B',2);
 }
 // Back to a blank sheet: nothing a scanned sign set is permanent.
+function tripURL(){
+  const a=st.A,b=st.B,bare=location.href.split('#')[0];
+  if(!a||!a.id||!b||!b.id||!DATA.floors[a.f]||!DATA.floors[b.f])return bare;
+  const P=(f,id)=>encodeURIComponent(f)+'/'+encodeURIComponent(id);
+  return bare+'#at='+P(a.f,a.id)+'&to='+P(b.f,b.id);
+}
+function syncURL(){ try{history.replaceState(null,'',tripURL());}catch(e){} }
+function clearURL(){ try{history.replaceState(null,'',location.href.split('#')[0]);}catch(e){} }
+function copyLink(){
+  const u=tripURL(), btn=$('savelink'), was='Copy link';
+  const done=ok=>{btn.textContent=ok?'Link copied':'Could not copy';
+                  setTimeout(()=>{btn.textContent=was;},2600);};
+  const old=()=>{            // older phones, and anything not on https
+    const t=document.createElement('textarea');
+    t.value=u; t.setAttribute('readonly','');
+    t.style.position='fixed'; t.style.top='-1000px'; t.style.opacity='0';
+    document.body.appendChild(t);
+    t.select(); try{t.setSelectionRange(0,u.length);}catch(e){}
+    let ok=false; try{ok=document.execCommand('copy');}catch(e){}
+    document.body.removeChild(t); done(ok);
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(u).then(()=>done(true),old);
+  else old();
+}
 function startOver(){
+  clearURL(); QRSEEN='';
   $('scanned').innerHTML='';
   for(const k of ['A','B']){
     const s=st[k];
@@ -1481,7 +1550,8 @@ function startOver(){
 function wiz(){
   const W=$('wiz'), TB=$('tripbar');
   if(STEP>=STEPDEF.length){W.hidden=true;TB.hidden=false;tripBar();go();
-    $('startroute').disabled=!ROUTE.length; return;}
+    $('startroute').disabled=!ROUTE.length;
+    $('qrshow').disabled=!ROUTE.length; return;}
   W.hidden=false; TB.hidden=true;
   $('floors').innerHTML=''; $('steps').hidden=true; $('msg').innerHTML=''; ROUTE=[];
   try{window.scrollTo({top:0,behavior:'instant'});}catch(e){window.scrollTo(0,0);}
@@ -1491,9 +1561,11 @@ function wiz(){
   $('wover').hidden=STEP===0;
   $('wover').onclick=startOver;
   crumbBar();
+  {const wt=document.querySelector('.wiztop');
+   if(wt)wt.hidden=$('wback').hidden&&$('wover').hidden&&!$('crumbs').children.length;}
   const sb=$('gfind');
   sb.value=FILTER;
-  sb.placeholder=d.s==='A'?'e.g. N204, 204, or Client Lounge':'Where are you heading?';
+  sb.placeholder=d.s==='A'?'e.g. N204 or Client Lounge':'Where are you heading?';
   sb.oninput=()=>{FILTER=sb.value;draw();};
   draw();
 
@@ -1655,6 +1727,11 @@ function helpHTML(){
     <li>Do the same for where you are going.</li>
     <li>Tap <b>Start route</b>. The map opens full screen.</li>
     <li>If the walk crosses floors or wings, tap <b>Next</b> at the top to see the next part of it.</li>
+    <li>Standing at a screen that is not yours? Tap <b>Show QR code</b> and point your
+        phone&rsquo;s camera at it &mdash; the same walk opens on your phone.</li>
+    <li>To keep a walk you use often, tap <b>Copy link</b> and paste it into a bookmark,
+        a note or a message. Opening that link brings the same route straight back &mdash;
+        the web address at the top of the screen always matches what you are looking at.</li>
   </ol>
   <h3>Reading the map</h3>
   <div class="keyrow">${dot('start')}<span>A blue ring is where you set off.</span></div>
@@ -1735,6 +1812,269 @@ function wireHelp(){
   $('fbdl').onclick=()=>saveAs('cae-quest-feedback.csv',fbCsv(fbAll()));
   fbCount();
 }
+// ---------------------------------------------------------------
+// A small QR encoder, byte mode, so a route can be handed to a
+// phone with nothing to install and no round trip to a server.
+// Reed-Solomon over GF(256), the usual function patterns, and the
+// eight masks scored the standard way.  Ported from the generator
+// that prints the signs, so a code on screen and a code on a wall
+// are built by the same rules.
+// ---------------------------------------------------------------
+const QR=(function(){
+  const EXP=new Array(512), LOG=new Array(256);
+  let _x=1;
+  for(let i=0;i<255;i++){EXP[i]=_x;LOG[_x]=i;_x<<=1;if(_x&0x100)_x^=0x11D;}
+  for(let i=255;i<512;i++)EXP[i]=EXP[i-255];
+  const mul=(a,b)=>(a===0||b===0)?0:EXP[LOG[a]+LOG[b]];
+  function rsGen(n){
+    let g=[1];
+    for(let i=0;i<n;i++){
+      const ng=new Array(g.length+1).fill(0);
+      for(let j=0;j<g.length;j++){ng[j]^=g[j];ng[j+1]^=mul(g[j],EXP[i]);}
+      g=ng;
+    }
+    return g;
+  }
+  function rsEC(data,n){
+    const g=rsGen(n), res=data.concat(new Array(n).fill(0));
+    for(let i=0;i<data.length;i++){
+      const c=res[i];
+      if(c)for(let j=0;j<g.length;j++)res[i+j]^=mul(g[j],c);
+    }
+    return res.slice(data.length);
+  }
+  const ECB={"1":{"L":[7,[[1,19]]],"M":[10,[[1,16]]],"Q":[13,[[1,13]]],"H":[17,[[1,9]]]},"2":{"L":[10,[[1,34]]],"M":[16,[[1,28]]],"Q":[22,[[1,22]]],"H":[28,[[1,16]]]},"3":{"L":[15,[[1,55]]],"M":[26,[[1,44]]],"Q":[18,[[2,17]]],"H":[22,[[2,13]]]},"4":{"L":[20,[[1,80]]],"M":[18,[[2,32]]],"Q":[26,[[2,24]]],"H":[16,[[4,9]]]},"5":{"L":[26,[[1,108]]],"M":[24,[[2,43]]],"Q":[18,[[2,15],[2,16]]],"H":[22,[[2,11],[2,12]]]},"6":{"L":[18,[[2,68]]],"M":[16,[[4,27]]],"Q":[24,[[4,19]]],"H":[28,[[4,15]]]},"7":{"L":[20,[[2,78]]],"M":[18,[[4,31]]],"Q":[18,[[2,14],[4,15]]],"H":[26,[[4,13],[1,14]]]},"8":{"L":[24,[[2,97]]],"M":[22,[[2,38],[2,39]]],"Q":[22,[[4,18],[2,19]]],"H":[26,[[4,14],[2,15]]]},"9":{"L":[30,[[2,116]]],"M":[22,[[3,36],[2,37]]],"Q":[20,[[4,16],[4,17]]],"H":[24,[[4,12],[4,13]]]},"10":{"L":[18,[[2,68],[2,69]]],"M":[26,[[4,43],[1,44]]],"Q":[24,[[6,19],[2,20]]],"H":[28,[[6,15],[2,16]]]},"11":{"L":[20,[[4,81]]],"M":[30,[[1,50],[4,51]]],"Q":[28,[[4,22],[4,23]]],"H":[24,[[3,12],[8,13]]]},"12":{"L":[24,[[2,92],[2,93]]],"M":[22,[[6,36],[2,37]]],"Q":[26,[[4,20],[6,21]]],"H":[28,[[7,14],[4,15]]]}};
+  const ALIGN={"1":[],"2":[6,18],"3":[6,22],"4":[6,26],"5":[6,30],"6":[6,34],"7":[6,22,38],"8":[6,24,42],"9":[6,26,46],"10":[6,28,50],"11":[6,30,54],"12":[6,32,58]};
+  const ECLBITS={L:1,M:0,Q:3,H:2};
+  const cap=(v,e)=>ECB[v][e][1].reduce((a,[b,d])=>a+b*d,0);
+  function fmtBits(ecl,mask){
+    const v=(ECLBITS[ecl]<<3)|mask;
+    let d=v<<10;
+    for(let i=4;i>=0;i--) if((d>>(10+i))&1) d^=0b10100110111<<i;
+    return ((v<<10)|d)^0b101010000010010;
+  }
+  function verBits(ver){
+    let d=ver<<12;
+    for(let i=5;i>=0;i--) if((d>>(12+i))&1) d^=0b1111100100101<<i;
+    return (ver<<12)|d;
+  }
+  function bytesOf(s){
+    const out=[], e=unescape(encodeURIComponent(s));
+    for(let i=0;i<e.length;i++)out.push(e.charCodeAt(i)&0xFF);
+    return out;
+  }
+  function encode(text,ecl){
+    const raw=bytesOf(text);
+    let ver=0;
+    for(let v=1;v<=12;v++){
+      const cb=v<10?8:16;
+      if(cap(v,ecl)*8 >= 4+cb+8*raw.length){ver=v;break;}
+    }
+    if(!ver)throw new Error('too long');
+    const cb=ver<10?8:16, bits=[];
+    const put=(v,n)=>{for(let i=n-1;i>=0;i--)bits.push((v>>i)&1);};
+    put(0b0100,4); put(raw.length,cb);
+    for(const b of raw)put(b,8);
+    const total=cap(ver,ecl)*8;
+    put(0,Math.min(4,total-bits.length));
+    while(bits.length%8)bits.push(0);
+    const pad=[0xEC,0x11];
+    for(let i=0;bits.length<total;i++)put(pad[i%2],8);
+    const dcw=[];
+    for(let i=0;i<bits.length;i+=8){
+      let v=0; for(let j=0;j<8;j++)v=(v<<1)|bits[i+j];
+      dcw.push(v);
+    }
+    const ecn=ECB[ver][ecl][0], blocks=ECB[ver][ecl][1];
+    const db=[], eb=[]; let p=0;
+    for(const [nb,dc] of blocks)
+      for(let k=0;k<nb;k++){
+        db.push(dcw.slice(p,p+dc)); p+=dc;
+        eb.push(rsEC(db[db.length-1],ecn));
+      }
+    const out=[], longest=Math.max(...db.map(b=>b.length));
+    for(let i=0;i<longest;i++)for(const b of db) if(i<b.length)out.push(b[i]);
+    for(let i=0;i<ecn;i++)for(const b of eb) out.push(b[i]);
+    return {ver,ecl,cw:out};
+  }
+  function frame(ver,cw){
+    const n=17+4*ver;
+    const m=[], res=[];
+    for(let r=0;r<n;r++){m.push(new Array(n).fill(null));}
+    const finder=(r,c)=>{
+      for(let i=-1;i<8;i++)for(let j=-1;j<8;j++){
+        const rr=r+i, cc=c+j;
+        if(rr<0||rr>=n||cc<0||cc>=n)continue;
+        const ring=(i>=0&&i<=6&&j>=0&&j<=6)&&
+                   (i===0||i===6||j===0||j===6||(i>=2&&i<=4&&j>=2&&j<=4));
+        m[rr][cc]=ring?1:0;
+      }
+    };
+    finder(0,0); finder(0,n-7); finder(n-7,0);
+    for(let i=8;i<n-8;i++){m[6][i]=1-(i%2); m[i][6]=1-(i%2);}
+    const A=ALIGN[ver], last=A.length?A[A.length-1]:0;
+    for(const a of A)for(const b of A){
+      if((a===6&&b===6)||(a===6&&b===last)||(a===last&&b===6))continue;
+      for(let i=-2;i<=2;i++)for(let j=-2;j<=2;j++)
+        m[a+i][b+j]=(Math.max(Math.abs(i),Math.abs(j))!==1)?1:0;
+    }
+    m[n-8][8]=1;
+    for(let r=0;r<n;r++)res.push(m[r].slice());
+    for(let i=0;i<9;i++){
+      if(res[8][i]===null)res[8][i]=0;
+      if(res[i][8]===null)res[i][8]=0;
+    }
+    for(let i=0;i<8;i++){
+      if(res[8][n-1-i]===null)res[8][n-1-i]=0;
+      if(res[n-1-i][8]===null)res[n-1-i][8]=0;
+    }
+    if(ver>=7)for(let i=0;i<6;i++)for(let j=0;j<3;j++){
+      res[n-11+j][i]=0; res[i][n-11+j]=0;
+    }
+    const free=[];
+    for(let r=0;r<n;r++){
+      free.push([]);
+      for(let c=0;c<n;c++)free[r].push(res[r][c]===null);
+    }
+    const bits=[];
+    for(const v of cw)for(let i=7;i>=0;i--)bits.push((v>>i)&1);
+    let pos=0, col=n-1, up=true;
+    while(col>0){
+      if(col===6)col-=1;
+      for(let k=0;k<n;k++){
+        const r=up?(n-1-k):k;
+        for(const c of [col,col-1])
+          if(free[r][c]){m[r][c]=pos<bits.length?bits[pos]:0; pos++;}
+      }
+      col-=2; up=!up;
+    }
+    return {m,free,n};
+  }
+  const MASKS=[
+    (r,c)=>(r+c)%2===0, (r,c)=>r%2===0, (r,c)=>c%3===0, (r,c)=>(r+c)%3===0,
+    (r,c)=>(Math.floor(r/2)+Math.floor(c/3))%2===0,
+    (r,c)=>((r*c)%2+(r*c)%3)===0,
+    (r,c)=>(((r*c)%2+(r*c)%3)%2)===0,
+    (r,c)=>(((r+c)%2+(r*c)%3)%2)===0];
+  const FIND=[1,0,1,1,1,0,1];
+  function penalty(m,n){
+    let s=0;
+    const lines=[];
+    for(let r=0;r<n;r++)lines.push(m[r]);
+    for(let c=0;c<n;c++){const col=[];for(let r=0;r<n;r++)col.push(m[r][c]);lines.push(col);}
+    for(const line of lines){
+      let run=1;
+      for(let i=1;i<n;i++){
+        if(line[i]===line[i-1])run++;
+        else{ if(run>=5)s+=3+(run-5); run=1; }
+      }
+      if(run>=5)s+=3+(run-5);
+      for(let i=0;i<n-10;i++){
+        let a=true,b=true;
+        for(let k=0;k<7;k++) if(line[i+k]!==FIND[k])a=false;
+        for(let k=7;k<11;k++) if(line[i+k]!==0)a=false;
+        for(let k=0;k<4;k++) if(line[i+k]!==0)b=false;
+        for(let k=0;k<7;k++) if(line[i+4+k]!==FIND[k])b=false;
+        if(a)s+=40;
+        if(b)s+=40;
+      }
+    }
+    for(let r=0;r<n-1;r++)for(let c=0;c<n-1;c++){
+      const v=m[r][c];
+      if(v===m[r][c+1]&&v===m[r+1][c]&&v===m[r+1][c+1])s+=3;
+    }
+    let dark=0;
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++)dark+=m[r][c];
+    s+=10*Math.floor(Math.trunc(Math.abs(dark*100/(n*n)-50))/5);
+    return s;
+  }
+  function build(text,ecl){
+    ecl=ecl||'Q';
+    const {ver,cw}=encode(text,ecl);
+    const base=frame(ver,cw), n=base.n;
+    let best=null;
+    for(let k=0;k<8;k++){
+      const m=base.m.map(r=>r.slice()), fn=MASKS[k];
+      for(let r=0;r<n;r++)for(let c=0;c<n;c++)
+        if(base.free[r][c]&&fn(r,c))m[r][c]^=1;
+      const f=fmtBits(ecl,k);
+      for(let i=0;i<15;i++){
+        const b=(f>>i)&1;
+        if(i<6)m[i][8]=b;
+        else if(i===6)m[7][8]=b;
+        else if(i===7)m[8][8]=b;
+        else if(i===8)m[8][7]=b;
+        else m[8][14-i]=b;
+        if(i<8)m[8][n-1-i]=b; else m[n-15+i][8]=b;
+      }
+      m[n-8][8]=1;
+      if(ver>=7){
+        const v=verBits(ver);
+        for(let i=0;i<18;i++){
+          const b=(v>>i)&1;
+          m[n-11+i%3][Math.floor(i/3)]=b;
+          m[Math.floor(i/3)][n-11+i%3]=b;
+        }
+      }
+      const p=penalty(m,n);
+      if(best===null||p<best.p)best={p,k,m,n,ver,ecl};
+    }
+    return best;
+  }
+  return {build};
+})();
+
+// Draw the code for whatever trip is on screen.  Always dark on white, even
+// in dark mode: a scanner wants the contrast the standard assumes.
+function drawQR(){
+  const url=tripURL(), cv=$('qrcanvas');
+  let r=null;
+  try{ r=QR.build(url,'Q'); }catch(e){ r=null; }
+  const g=cv.getContext('2d');
+  if(!r){ cv.width=cv.height=560; g.fillStyle='#fff'; g.fillRect(0,0,560,560); return false; }
+  // whole pixels per module, and the drawn size is the shown size: a code
+  // resampled onto fractional boundaries is one a camera can fail to read
+  const quiet=4, side=r.n+quiet*2;
+  const mod=Math.max(4,Math.floor(300/side)), px=side*mod;
+  cv.width=px; cv.height=px;
+  cv.style.width=px+'px'; cv.style.height=px+'px';
+  g.fillStyle='#fff'; g.fillRect(0,0,px,px);
+  g.fillStyle='#0B1233';
+  for(let y=0;y<r.n;y++)for(let x=0;x<r.n;x++)
+    if(r.m[y][x])g.fillRect((x+quiet)*mod,(y+quiet)*mod,mod,mod);
+  $('qrlink').textContent=url;
+  // a place may carry a second name (a brief room's simulator); show both
+  const nmOf=(f,id)=>{
+    const fl=DATA.floors[f]; if(!fl)return id;
+    const q=fl.places.filter(z=>z.id===id)[0];
+    return (q&&q.nm)?q.id+' · '+q.nm:id;
+  };
+  const A=st.A,B=st.B;
+  $('qrtrip').innerHTML=ESC(nmOf(A.f,A.id))+' <span style="color:var(--blue)">&rarr;</span> '+
+                        ESC(nmOf(B.f,B.id));
+  return true;
+}
+// Once per trip, and never over something the person already opened.
+let QRSEEN='';
+function maybeQR(){
+  if(!ROUTE.length)return;
+  if(QRAT&&QRTO)return;                       // they arrived by scanning one
+  if(!$('viewer').hidden||!$('help').hidden||!$('qrpanel').hidden)return;
+  if(typeof ED!=='undefined'&&ED.on)return;
+  const key=st.A.f+'/'+st.A.id+'\u2192'+st.B.f+'/'+st.B.id;
+  if(key===QRSEEN)return;
+  QRSEEN=key; openQR();
+}
+function openQR(){
+  if(!ROUTE.length)return;
+  drawQR();
+  $('qrpanel').hidden=false; lockPage(); $('qrclose').focus();
+}
+function closeQR(){ $('qrpanel').hidden=true; unlockPage(); }
+$('qrshow').onclick=openQR;
+$('qrclose').onclick=closeQR;
+$('qrmap').onclick=()=>{ closeQR(); if(ROUTE.length)openV(ROUTE[0]); };
+
 function openHelp(){
   const h=$('help');
   if(!h.dataset.ready){$('hbody').innerHTML=helpHTML();wireHelp();h.dataset.ready='1';}
