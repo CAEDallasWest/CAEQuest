@@ -57,6 +57,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple
 .qrhint{font-size:16px;line-height:1.6;color:var(--text-dim);margin:22px 0 10px}
 .qrlink{font-size:12px;color:var(--text-dim);opacity:.75;word-break:break-all;margin:0 0 26px}
 button.qrmap{width:100%;max-width:340px}
+body.scanned-trip #qrshow, body.scanned-trip #savelink,
+body.scanned-trip #again,  body.scanned-trip #over2{display:none}
 @media(max-width:420px){.qrcard{padding:14px}}
 .help h3{font-size:19px;font-weight:800;color:var(--heading);margin:30px 0 10px}
 .help h3:first-child{margin-top:0}
@@ -1494,6 +1496,10 @@ function crumbBar(){
   if(STEP>2)add(DATA.buildings[st.B.b],2);
 }
 function tripBar(){
+  const onScan = !!(QRAT&&QRTO) &&
+    st.A.f===QRAT.f && st.A.id===QRAT.id &&
+    st.B.f===QRTO.f && st.B.id===QRTO.id;
+  document.body.classList.toggle('scanned-trip', onScan);
   const el=$('trip'); el.innerHTML='';
   const one=(side,back)=>{
     const s=st[side], b=document.createElement('button');
