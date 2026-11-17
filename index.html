@@ -258,6 +258,13 @@ body.vopen .edgear{display:none}
   border:1px solid var(--line);background:var(--wash);color:var(--text);cursor:pointer}
 .edcard button.pri,.edbar button.pri{background:var(--blue);border-color:var(--blue);color:#fff}
 .ednote{font-size:12.5px;color:var(--mapsoft);margin:0 0 12px}
+.edchk{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--text);
+  margin:2px 0 14px;line-height:1.4}
+.edchk input{width:18px;height:18px;margin:1px 0 0;flex:0 0 auto}
+.idlechip{position:fixed;left:14px;bottom:14px;z-index:75;background:var(--heading);
+  color:#fff;font-size:13px;font-weight:700;letter-spacing:.02em;padding:9px 14px;
+  border-radius:999px;box-shadow:0 6px 18px rgba(6,16,61,.28);pointer-events:none}
+.idlechip[hidden]{display:none}
 .edmsg{font-size:13px;color:var(--end);min-height:19px}
 .edbar{display:flex;flex-wrap:wrap;gap:7px;align-items:center;background:var(--wash);
   border-bottom:1px solid var(--line);padding:9px 14px}
@@ -398,6 +405,7 @@ body.editing .viewer-body{cursor:crosshair;touch-action:none}
   <div class="steps" id="steps" hidden></div>
   <div id="floors"></div>
 </div>
+<div class="idlechip" id="idlechip" hidden aria-live="polite"></div>
 <div class="help" id="qrpanel" hidden>
   <div class="viewer-bar helpbar"><strong>Take this route with you</strong><span class="vstep"></span>
     <button id="qrclose" class="close" aria-label="Close" title="Close">&#10005;</button></div>
@@ -435,6 +443,18 @@ body.editing .viewer-body{cursor:crosshair;touch-action:none}
   <div class="edmsg" id="edaddmsg"></div>
   <div class="row2"><button id="edaddcancel" type="button">Cancel</button><button id="edaddok" type="button" class="pri">Add</button></div>
 </div></div>
+<div class="edsheet" id="edhomeask" hidden><div class="edcard">
+  <h3>This screen</h3>
+  <p class="ednote">Say where this screen is standing. Visitors then only choose where they
+     are going, and it returns here by itself once nobody is using it. Leave it off for a
+     phone or a laptop.</p>
+  <select id="edhomefloor" aria-label="Floor"></select>
+  <select id="edhomeplace" aria-label="Place"></select>
+  <label class="edchk"><input type="checkbox" id="edhomeidle" checked>
+    Return here after 45 seconds of nobody touching it</label>
+  <div class="row2"><button id="edhomeoff" type="button">Not a screen</button>
+    <button id="edhomeok" type="button" class="pri">Save</button></div>
+</div></div>
 <div class="edsheet" id="eddelask" hidden><div class="edcard">
   <h3>Delete this point?</h3>
   <div class="edmsg" id="eddelwhat"></div>
@@ -460,6 +480,7 @@ body.editing .viewer-body{cursor:crosshair;touch-action:none}
       <input id="edsize" type="range" min="3" max="60" step="1" value="11" aria-label="Brush size">
       <svg class="edsizedot" viewBox="0 0 64 64" width="24" height="24" aria-hidden="true"><circle id="edsizedot" cx="32" cy="32" r="12"/></svg>
     </span>
+    <button id="edhome" type="button">Screen settings</button>
     <button id="edundo" type="button">Undo</button>
     <span class="edstat" id="edstat"></span><span class="sp"></span>
     <button id="edsave" type="button">Save</button>
@@ -1496,6 +1517,7 @@ function crumbBar(){
   if(STEP>2)add(DATA.buildings[st.B.b],2);
 }
 function tripBar(){
+  armIdle();
   const onScan = !!(QRAT&&QRTO) &&
     st.A.f===QRAT.f && st.A.id===QRAT.id &&
     st.B.f===QRTO.f && st.B.id===QRTO.id;
@@ -1543,6 +1565,7 @@ function copyLink(){
 }
 function startOver(){
   clearURL(); QRSEEN='';
+  if(HOME&&homeState()){ $('scanned').innerHTML=''; closeQR(); wiz(); return; }
   $('scanned').innerHTML='';
   for(const k of ['A','B']){
     const s=st[k];
@@ -1566,7 +1589,7 @@ function wiz(){
   $('wback').onclick=()=>{STEP=Math.max(0,STEP-1);FILTER='';wiz();};
   $('wover').hidden=STEP===0;
   $('wover').onclick=startOver;
-  crumbBar();
+  crumbBar(); armIdle();
   {const wt=document.querySelector('.wiztop');
    if(wt)wt.hidden=$('wback').hidden&&$('wover').hidden&&!$('crumbs').children.length;}
   const sb=$('gfind');
@@ -1733,6 +1756,8 @@ function helpHTML(){
     <li>Do the same for where you are going.</li>
     <li>Tap <b>Start route</b>. The map opens full screen.</li>
     <li>If the walk crosses floors or wings, tap <b>Next</b> at the top to see the next part of it.</li>
+    <li>On a screen that belongs to the building, the walk you pick goes back to the
+        front of the queue on its own after a short while, so the next person starts fresh.</li>
     <li>Standing at a screen that is not yours? Tap <b>Show QR code</b> and point your
         phone&rsquo;s camera at it &mdash; the same walk opens on your phone.</li>
     <li>To keep a walk you use often, tap <b>Copy link</b> and paste it into a bookmark,
@@ -2035,13 +2060,18 @@ const QR=(function(){
 function drawQR(){
   const url=tripURL(), cv=$('qrcanvas');
   let r=null;
-  try{ r=QR.build(url,'Q'); }catch(e){ r=null; }
+  // M, not the Q the printed signs use: a screen does not get scuffed or
+  // rained on, and the slacker level means fewer, fatter modules to read
+  try{ r=QR.build(url,'M'); }catch(e){ r=null; }
   const g=cv.getContext('2d');
   if(!r){ cv.width=cv.height=560; g.fillStyle='#fff'; g.fillRect(0,0,560,560); return false; }
   // whole pixels per module, and the drawn size is the shown size: a code
   // resampled onto fractional boundaries is one a camera can fail to read
   const quiet=4, side=r.n+quiet*2;
-  const mod=Math.max(4,Math.floor(300/side)), px=side*mod;
+  // as many whole pixels per module as the screen can spare: a wall display is
+  // read from a metre away, a phone from arm's length
+  const room=Math.max(230,Math.min(430,Math.floor((window.innerWidth||360)*0.74)));
+  const mod=Math.max(4,Math.floor(room/side)), px=side*mod;
   cv.width=px; cv.height=px;
   cv.style.width=px+'px'; cv.style.height=px+'px';
   g.fillStyle='#fff'; g.fillRect(0,0,px,px);
@@ -2064,6 +2094,7 @@ function drawQR(){
 let QRSEEN='';
 function maybeQR(){
   if(!ROUTE.length)return;
+  if(!HOME)return;                            // a phone or a laptop asks first
   if(QRAT&&QRTO)return;                       // they arrived by scanning one
   if(!$('viewer').hidden||!$('help').hidden||!$('qrpanel').hidden)return;
   if(typeof ED!=='undefined'&&ED.on)return;
@@ -2074,11 +2105,12 @@ function maybeQR(){
 function openQR(){
   if(!ROUTE.length)return;
   drawQR();
-  $('qrpanel').hidden=false; lockPage(); $('qrclose').focus();
+  $('qrpanel').hidden=false; lockPage(); $('qrclose').focus(); armIdle();
 }
-function closeQR(){ $('qrpanel').hidden=true; unlockPage(); }
+function closeQR(){ $('qrpanel').hidden=true; unlockPage(); armIdle(); }
 $('qrshow').onclick=openQR;
-$('qrclose').onclick=closeQR;
+// on a screen that has a home, closing the code is the end of that visit
+$('qrclose').onclick=()=>{ if(HOME)goHome(); else closeQR(); };
 $('qrmap').onclick=()=>{ closeQR(); if(ROUTE.length)openV(ROUTE[0]); };
 
 function openHelp(){
@@ -2448,8 +2480,114 @@ $('edclear').onclick=()=>{
   }).catch(()=>{});
 }catch(e){} })();
 
+// ---- where this screen lives, and finding the way back ----
+const HKEY='caequest-home';
+let HOME=null;
+(function(){
+  try{
+    const q=new URLSearchParams(location.hash.replace(/^#/,''));
+    const h=q.get('home');                       // set a display by its bookmark
+    if(h){
+      const i=h.indexOf('/');
+      if(i>0){
+        HOME={f:h.slice(0,i),id:decodeURIComponent(h.slice(i+1)),idle:q.get('idle')!=='0'};
+        try{localStorage.setItem(HKEY,JSON.stringify(HOME));}catch(e){}
+      }
+    }
+  }catch(e){}
+  if(!HOME){ try{const v=localStorage.getItem(HKEY); if(v)HOME=JSON.parse(v);}catch(e){} }
+  const f=HOME&&DATA.floors[HOME.f];
+  if(!f||!f.places.some(q=>q.id===HOME.id))HOME=null;   // a point that has since gone
+})();
+function homeState(){
+  if(!HOME)return false;
+  const f=DATA.floors[HOME.f];
+  if(!f||!f.places.some(q=>q.id===HOME.id))return false;
+  FILTER=''; ROUTE=[]; LASTR=null; QRSEEN='';
+  st.A={f:HOME.f,id:HOME.id,b:BLD(HOME.f),pb:true,pf:true,pr:true};
+  st.B={f:HOME.f,id:null,b:BLD(HOME.f),pb:false,pf:false,pr:false};
+  STEP=2;                      // the start is known, so the question is the destination
+  return true;
+}
+function goHome(){
+  if(!homeState())return false;
+  closeQR();
+  if(!$('viewer').hidden)$('vclose').click();
+  $('scanned').innerHTML=''; clearURL(); wiz();
+  return true;
+}
+
+const IDLE_MS=45000, WARN_MS=10000;
+let idleT=null, warnT=null, tickT=null;
+function atHome(){
+  return !!HOME && STEP===2 && !ROUTE.length &&
+         st.A.f===HOME.f && st.A.id===HOME.id;
+}
+function clearIdle(){
+  clearTimeout(idleT); clearTimeout(warnT); clearInterval(tickT);
+  idleT=warnT=tickT=null;
+  const c=$('idlechip'); if(c)c.hidden=true;
+}
+// Counts only while there is something to go back from, and never while the
+// map tools are open: an admin mid-edit should not be reset out from under.
+function idleReset(){
+  clearIdle();
+  if(!HOME){ closeQR(); return; }
+  closeQR();
+  if(!$('viewer').hidden)$('vclose').click();
+  goHome();
+}
+function armIdle(){
+  clearIdle();
+  if(typeof ED!=='undefined'&&ED.on)return;      // an admin mid-edit stays put
+  if(!$('help').hidden)return;
+  if(HOME&&HOME.idle!==false){
+    if(atHome())return;                          // nothing to come back from
+  }else if($('qrpanel').hidden){
+    return;    // no home set, so only the code screen hands itself back
+  }
+  warnT=setTimeout(()=>{
+    let left=Math.round(WARN_MS/1000);
+    const c=$('idlechip');
+    const show=()=>{c.hidden=false;c.textContent='Starting over in '+left+'\u2026';};
+    show(); tickT=setInterval(()=>{ left=Math.max(0,left-1); show(); },1000);
+  }, Math.max(0,IDLE_MS-WARN_MS));
+  idleT=setTimeout(idleReset, IDLE_MS);
+}
+for(const ev of ['pointerdown','keydown','wheel','touchstart'])
+  document.addEventListener(ev, armIdle, {passive:true, capture:true});
+
+function edHomeFill(){
+  const fs=$('edhomefloor'), ps=$('edhomeplace');
+  fs.innerHTML='';
+  for(const fk of ORDER){
+    const o=document.createElement('option');
+    o.value=fk; o.textContent=DATA.floors[fk].name; fs.appendChild(o);
+  }
+  const fk=(HOME&&DATA.floors[HOME.f])?HOME.f:(ED.fk||ORDER[0]);
+  fs.value=fk; fillPlaces(ps,fk,HOME?HOME.id:null);
+  $('edhomeidle').checked=!(HOME&&HOME.idle===false);
+}
+$('edhome').onclick=()=>{ edHomeFill(); $('edhomeask').hidden=false; };
+$('edhomefloor').onchange=e=>fillPlaces($('edhomeplace'),e.target.value,null);
+$('edhomeoff').onclick=()=>{
+  HOME=null; try{localStorage.removeItem(HKEY);}catch(e){}
+  clearIdle(); $('edhomeask').hidden=true;
+  edSay('This is no longer set up as a screen.');
+};
+$('edhomeok').onclick=()=>{
+  const f=$('edhomefloor').value, id=$('edhomeplace').value;
+  if(!f||!id)return;
+  HOME={f,id,idle:$('edhomeidle').checked};
+  try{localStorage.setItem(HKEY,JSON.stringify(HOME));}catch(e){}
+  $('edhomeask').hidden=true;
+  edSay('Screen set to '+id+' \u2014 '+DATA.floors[f].name+
+        (HOME.idle?'. It will return there when idle.':'.'));
+};
+
 syncHow();applyT(readT());
 STEP=QRAT?(QRTO?STEPDEF.length:2):0;
+if(!QRAT&&HOME)homeState();   // a screen that knows where it is starts there
 wiz();
 if(QRAT){
   const nm=DATA.floors[QRAT.f].name, esc=ESC;
