@@ -8,7 +8,9 @@
 <meta name="theme-color" content="#0B1233">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"
+      media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
 <style>
 :root{
   --navy:#0B1233; --blue:#2969f2; --blue-hi:#0147fa; --lime:#C4F03A;
@@ -1538,13 +1540,23 @@ function tripBar(){
   one('B',2);
 }
 // Back to a blank sheet: nothing a scanned sign set is permanent.
-function tripURL(){
-  const a=st.A,b=st.B,bare=location.href.split('#')[0];
-  if(!a||!a.id||!b||!b.id||!DATA.floors[a.f]||!DATA.floors[b.f])return bare;
+// Where this map lives on the web.  A QR has to carry an address a stranger's
+// phone can open, which the file:// path of a downloaded copy never is.
+const PUBLIC_URL='https://caedallaswest.github.io/CAEQuest/';
+const servedOnWeb=()=>/^https?:$/.test(location.protocol);
+function tripHash(){
+  const a=st.A,b=st.B;
+  if(!a||!a.id||!b||!b.id||!DATA.floors[a.f]||!DATA.floors[b.f])return '';
   const P=(f,id)=>encodeURIComponent(f)+'/'+encodeURIComponent(id);
-  return bare+'#at='+P(a.f,a.id)+'&to='+P(b.f,b.id);
+  return '#at='+P(a.f,a.id)+'&to='+P(b.f,b.id);
 }
-function syncURL(){ try{history.replaceState(null,'',tripURL());}catch(e){} }
+function tripURL(){                       // for the QR and for Copy link
+  return (servedOnWeb()?location.href.split('#')[0]:PUBLIC_URL)+tripHash();
+}
+function localURL(){                      // for this window's own address bar
+  return location.href.split('#')[0]+tripHash();
+}
+function syncURL(){ try{history.replaceState(null,'',localURL());}catch(e){} }
 function clearURL(){ try{history.replaceState(null,'',location.href.split('#')[0]);}catch(e){} }
 function copyLink(){
   const u=tripURL(), btn=$('savelink'), was='Copy link';
@@ -1788,6 +1800,9 @@ function helpHTML(){
     <li><b>Elevator / Stairs</b> changes how the route gets between floors.</li>
     <li><b>Change</b> takes you back to edit either end of the trip.</li>
     <li>Scanning a sign around the site fills in where you are, so you only pick the destination.</li>
+    <li>This page works with no connection &mdash; the plans are inside the file. The QR codes it
+        shows carry the map&rsquo;s web address, so the phone scanning one needs signal even
+        when this screen does not.</li>
   </ul>
   <section class="fb">
     <h3>How is it working for you?</h3>
